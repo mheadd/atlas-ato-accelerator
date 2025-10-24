@@ -185,6 +185,27 @@ cd ..
 
 ## Demo Walkthrough
 
+**Note:** The following prompts assume you are in the `demo/` directory. If you're in the repository root, run `cd demo` first.
+
+### ⚠️ Important: LocalStack & Kind Compatibility
+
+The `AGENTS.md` guidance file in this directory is **specifically optimized for LocalStack (free tier) and Kind**. It includes:
+
+- **LocalStack-specific configurations**: `s3_use_path_style = true`, simplified tag formats
+- **LocalStack-compatible tag naming**: PascalCase keys, underscore separators (e.g., `ComplianceControls = "SC-28_AU-2"`)
+- **Free-tier AWS services only**: S3, IAM, KMS (RDS requires LocalStack Pro)
+- **Simplified patterns**: Avoiding features that don't work reliably in LocalStack
+
+**For production AWS environments**, you would:
+- Remove `s3_use_path_style = true`
+- Use standard AWS tag formats with colons and commas if preferred
+- Enable advanced features (RDS, managed services, etc.)
+- Add production-grade validation and lifecycle policies
+
+The compliance patterns and NIST control mappings remain the same - only the LocalStack compatibility layer changes.
+
+---
+
 Now you're ready to use AI assistance to generate NIST-compliant infrastructure code!
 
 ### Phase 1: Generate AWS Infrastructure (Terraform)
@@ -196,7 +217,7 @@ Open your AI coding assistant (Claude, GitHub Copilot, etc.) in your IDE. The as
 ```
 Create Terraform configuration for an S3 bucket in LocalStack that will be used 
 for storing application file uploads. The bucket should be NIST-compliant 
-following the patterns in AGENTS.md. Store the configuration in demo/tf/s3.tf
+following the patterns in AGENTS.md. Store the configuration in tf/s3.tf
 ```
 
 Expected output: Terraform file with encrypted S3 bucket, versioning, logging, proper tagging, and NIST control mappings.
@@ -204,21 +225,21 @@ Expected output: Terraform file with encrypted S3 bucket, versioning, logging, p
 **Prompt 2: Generate Terraform Provider Configuration**
 
 ```
-Create the Terraform provider configuration for LocalStack in demo/tf/provider.tf,
+Create the Terraform provider configuration for LocalStack in tf/provider.tf,
 configured to work with LocalStack running at http://localhost:4566
 ```
 
 **Prompt 3: Generate Terraform Variables**
 
 ```
-Create a variables file in demo/tf/variables.tf for the infrastructure configuration,
+Create a variables file in tf/variables.tf for the infrastructure configuration,
 including bucket name, AWS region, and environment settings
 ```
 
 **Prompt 4: Generate Terraform Outputs**
 
 ```
-Create outputs in demo/tf/outputs.tf that will expose the S3 bucket name and ARN
+Create outputs in tf/outputs.tf that will expose the S3 bucket name and ARN
 for use by our application
 ```
 
@@ -227,7 +248,7 @@ for use by our application
 Apply the generated Terraform:
 
 ```bash
-cd demo/tf
+cd tf
 
 # Initialize Terraform
 terraform init
@@ -240,6 +261,9 @@ terraform apply -auto-approve
 
 # Save outputs for later use
 terraform output -json > outputs.json
+
+# Return to demo directory
+cd ..
 ```
 
 ### Phase 3: Generate Kubernetes Deployment
@@ -247,7 +271,7 @@ terraform output -json > outputs.json
 **Prompt 5: Generate PostgreSQL Database Deployment**
 
 ```
-Create a Kubernetes StatefulSet manifest in demo/tf/k8s-postgres.tf using the 
+Create a Kubernetes StatefulSet manifest in tf/k8s-postgres.tf using the 
 Terraform Kubernetes provider. Deploy a PostgreSQL database with persistent 
 storage for our demo API. Include NIST-compliant security configurations.
 ```
@@ -255,7 +279,7 @@ storage for our demo API. Include NIST-compliant security configurations.
 **Prompt 6: Generate Application Deployment**
 
 ```
-Create a Kubernetes deployment manifest in demo/tf/k8s-deployment.tf using the 
+Create a Kubernetes deployment manifest in tf/k8s-deployment.tf using the 
 Terraform Kubernetes provider. Deploy the atlas-demo-api:latest container with 
 environment variables for database connectivity and S3 bucket access. Include 
 resource limits and health checks.
@@ -264,15 +288,38 @@ resource limits and health checks.
 **Prompt 7: Generate Kubernetes Service**
 
 ```
-Create a Kubernetes service manifest in demo/tf/k8s-service.tf to expose the 
+Create a Kubernetes service manifest in tf/k8s-service.tf to expose the 
 demo API on port 3000 as a LoadBalancer type service.
 ```
+
+**⚠️ Note About LoadBalancer Services in Kind:**
+
+When you create a LoadBalancer service in Kind, it will remain in "Pending" status because Kind doesn't provide a built-in load balancer implementation (unlike cloud providers like AWS, GCP, or Azure). **This is expected behavior and not an error.**
+
+The service is still fully functional for:
+- Internal cluster communication
+- Port-forwarding for local access
+- Testing NIST-compliant configurations
+
+This configuration is valuable because:
+- It's **production-ready** - the same code works in cloud environments
+- It includes all **NIST compliance features** (external traffic policy, session affinity, health checks)
+- It requires **no modifications** when deployed to AWS, GCP, or Azure
+
+You'll use `kubectl port-forward` in Phase 4 to access the service locally.
 
 Apply the Kubernetes resources:
 
 ```bash
+cd tf
+
 # Apply the Kubernetes manifests
+# This typically takes 15-30 seconds for Terraform, 
+# then 1-2 minutes for pods to become ready
 terraform apply -auto-approve
+
+# Return to demo directory
+cd ..
 
 # Wait for pod to be ready
 kubectl wait --for=condition=ready pod -l app=atlas-demo-api --timeout=60s
@@ -318,8 +365,8 @@ curl -X DELETE http://localhost:3000/api/items/{id}
 **Prompt 8: Generate Compliance Report**
 
 ```
-Analyze the Terraform files in demo/tf/ and generate a compliance summary document
-in demo/ato/compliance-summary.md that lists all NIST 800-53 controls that have been
+Analyze the Terraform files in tf/ and generate a compliance summary document
+in ato/compliance-summary.md that lists all NIST 800-53 controls that have been
 implemented, which resources implement each control, and the specific configurations
 that satisfy each control requirement.
 ```
@@ -327,7 +374,7 @@ that satisfy each control requirement.
 **Prompt 9: Generate Control Implementation Matrix**
 
 ```
-Create a control implementation matrix in demo/ato/control-matrix.csv that maps
+Create a control implementation matrix in ato/control-matrix.csv that maps
 each Terraform resource to the NIST controls it implements, including the control
 family, implementation status, and evidence location.
 ```
@@ -336,10 +383,10 @@ Review the generated compliance artifacts:
 
 ```bash
 # View compliance summary
-cat demo/ato/compliance-summary.md
+cat ato/compliance-summary.md
 
 # View control matrix
-cat demo/ato/control-matrix.csv
+cat ato/control-matrix.csv
 ```
 
 ## Cleanup
@@ -347,9 +394,10 @@ cat demo/ato/control-matrix.csv
 When you're done with the demo:
 
 ```bash
-# Destroy Terraform resources
-cd demo/tf
+# Destroy Terraform resources (from demo directory)
+cd tf
 terraform destroy -auto-approve
+cd ..
 
 # Delete Kind cluster
 kind delete cluster --name atlas-demo

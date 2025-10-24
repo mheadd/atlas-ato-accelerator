@@ -52,6 +52,9 @@ provider "aws" {
   skip_credentials_validation = true
   skip_metadata_api_check     = true
   skip_requesting_account_id  = true
+  
+  # CRITICAL: LocalStack requires path-style S3 URLs
+  s3_use_path_style = true
 
   endpoints {
     s3             = "http://localhost:4566"
@@ -62,12 +65,13 @@ provider "aws" {
 
   default_tags {
     tags = {
-      Environment        = "demo"
-      ManagedBy         = "terraform"
+      Environment         = "demo"
+      ManagedBy          = "terraform"
       ComplianceFramework = "NIST-800-53"
-      Project           = "atlas-ato-accelerator"
+      Project            = "atlas-ato-accelerator"
     }
   }
+}
 }
 
 provider "kubernetes" {
@@ -100,11 +104,11 @@ resource "aws_s3_bucket" "app_storage" {
   bucket = var.bucket_name
   
   tags = {
-    Name                       = var.bucket_name
-    "compliance:nist-controls" = "SC-28,SC-28(1),AU-2,AU-9,CP-9,AC-6"
-    "compliance:impact-level"  = "moderate"
-    "ato:criticality"          = "high"
-    "ato:data-classification"  = "sensitive"
+    Name                = var.bucket_name
+    ComplianceControls  = "SC-28_SC-28-1_AU-2_AU-9_CP-9_AC-6"
+    ComplianceLevel     = "moderate"
+    AtoCriticality      = "high"
+    DataClassification  = "sensitive"
   }
 }
 
@@ -141,9 +145,9 @@ resource "aws_s3_bucket" "logs" {
   bucket = "${var.bucket_name}-logs"
   
   tags = {
-    Name                       = "${var.bucket_name}-logs"
-    "compliance:nist-controls" = "AU-2,AU-9"
-    Purpose                    = "Access Logs"
+    Name               = "${var.bucket_name}-logs"
+    ComplianceControls = "AU-2_AU-9"
+    Purpose            = "AccessLogs"
   }
 }
 
@@ -158,6 +162,41 @@ resource "aws_s3_bucket_public_access_block" "app_storage" {
 }
 ```
 
+**Important Notes for S3 Configuration:**
+- **Do NOT add lifecycle rules** unless specifically requested - they add complexity and can cause validation errors in LocalStack
+- Keep the configuration focused on core security controls: encryption, versioning, logging, and public access blocking
+- LocalStack may not support all AWS S3 features - stick to basics
+- If lifecycle rules are needed, always include either a `filter` block or `prefix` attribute in each rule
+
+### LocalStack-Compatible Tagging Standards
+
+**CRITICAL:** LocalStack is stricter about tag formatting than AWS. Follow these rules:
+
+**Tag Key Naming:**
+- ❌ **DON'T** use colons: `"compliance:nist-controls"`
+- ❌ **DON'T** use hyphens in keys: `"ato:data-classification"`
+- ✅ **DO** use PascalCase: `"ComplianceControls"`, `"DataClassification"`
+
+**Tag Value Formatting:**
+- ❌ **DON'T** use commas: `"SC-28,AU-2,CP-9"`
+- ❌ **DON'T** use parentheses: `"SC-28(1)"`
+- ❌ **DON'T** use spaces: `"Access Logs"`
+- ✅ **DO** use underscores as separators: `"SC-28_AU-2_CP-9"`
+- ✅ **DO** replace parentheses with hyphens: `"SC-28-1"` instead of `"SC-28(1)"`
+- ✅ **DO** use PascalCase for multi-word values: `"AccessLogs"`
+
+**Standard Tag Schema for All Resources:**
+```hcl
+tags = {
+  Name                = "resource-name"
+  ComplianceControls  = "SC-28_SC-28-1_AU-2_AU-9"  # Underscore-separated NIST control IDs
+  ComplianceLevel     = "moderate"                  # low, moderate, high
+  AtoCriticality      = "high"                      # low, medium, high
+  DataClassification  = "sensitive"                 # public, internal, sensitive, classified
+  Purpose             = "ApplicationStorage"        # Brief description in PascalCase
+}
+```
+
 ## PostgreSQL Database Patterns (Kubernetes)
 
 Since RDS requires LocalStack Pro, we deploy PostgreSQL as a Kubernetes StatefulSet with NIST-compliant configurations.
@@ -169,6 +208,26 @@ Since RDS requires LocalStack Pro, we deploy PostgreSQL as a Kubernetes Stateful
 - **IA-5**: Authenticator Management
 - **SC-7**: Boundary Protection
 
+### Important PostgreSQL Deployment Considerations
+
+**NetworkPolicy Egress Rules:**
+- ❌ **DON'T** use empty `to` blocks in egress rules - this is invalid
+- ✅ **DO** omit the `to` block entirely to allow "any destination"
+- Example: For unrestricted egress, use `egress { ports { ... } }` without a `to` block
+
+**Database Initialization:**
+- PostgreSQL's automatic database creation expects default settings
+- Custom `postgresql.conf` configurations may interfere with initialization
+- Test database creation with your config before applying custom settings
+- If using custom configs, ensure they don't conflict with `POSTGRES_DB` environment variable
+
+**Authentication Testing:**
+- Always test with the intended authentication method
+- Network connections use `md5` or `scram-sha-256` authentication
+- Local socket connections may use `trust` or `peer` authentication
+- Verify `pg_hba.conf` settings match your deployment method (network vs local)
+- Test connectivity from application pods, not just within the database pod
+
 ### Compliant PostgreSQL StatefulSet
 
 ```hcl
@@ -179,8 +238,8 @@ resource "kubernetes_stateful_set" "postgres" {
   metadata {
     name = "postgres"
     labels = {
-      app                         = "postgres"
-      "compliance:nist-controls"  = "SC-28,CP-9,IA-5,SC-7"
+      app                = "postgres"
+      ComplianceControls = "SC-28_CP-9_IA-5_SC-7"
     }
   }
 
@@ -364,11 +423,11 @@ resource "aws_db_instance" "app_database" {
   skip_final_snapshot = true  # Demo only - set to false in production
   
   tags = {
-    Name                    = "${var.db_identifier}"
-    "compliance:nist-controls" = "SC-28,SC-28(1),AU-2,AU-9,CP-9,IA-5,SI-7"
-    "compliance:impact-level"  = "moderate"
-    "ato:criticality"          = "high"
-    "ato:data-classification"  = "sensitive"
+    Name               = "${var.db_identifier}"
+    ComplianceControls = "SC-28_SC-28-1_AU-2_AU-9_CP-9_IA-5_SI-7"
+    ComplianceLevel    = "moderate"
+    AtoCriticality     = "high"
+    DataClassification = "sensitive"
   }
 }
 
@@ -380,9 +439,9 @@ resource "aws_kms_key" "database" {
   enable_key_rotation     = true
   
   tags = {
-    Name                       = "atlas-demo-db-key"
-    "compliance:nist-controls" = "SC-12,SC-13,SC-28(1)"
-    Purpose                    = "Database Encryption"
+    Name               = "atlas-demo-db-key"
+    ComplianceControls = "SC-12_SC-13_SC-28-1"
+    Purpose            = "DatabaseEncryption"
   }
 }
 
@@ -415,9 +474,9 @@ resource "aws_security_group" "database" {
   }
   
   tags = {
-    Name                       = "${var.db_identifier}-sg"
-    "compliance:nist-controls" = "SC-7,SC-7(5)"
-    Purpose                    = "Database Network Protection"
+    Name               = "${var.db_identifier}-sg"
+    ComplianceControls = "SC-7_SC-7-5"
+    Purpose            = "DatabaseNetworkProtection"
   }
 }
 ```
@@ -461,6 +520,12 @@ variable "db_password" {
 }
 ```
 
+**Important Notes for Variables:**
+- **Do NOT add custom validation rules** for passwords in demo environments - the default value may not pass complex validation
+- Keep variable definitions simple and straightforward
+- Validation should be added in production environments, not demos
+- Sensitive variables should be marked with `sensitive = true`
+
 ### Outputs Pattern
 
 ```hcl
@@ -496,9 +561,9 @@ output "db_name" {
 output "compliance_controls" {
   description = "NIST 800-53 controls implemented by this infrastructure"
   value = {
-    s3_controls       = "SC-28,SC-28(1),AU-2,AU-9,CP-9,AC-6"
-    postgres_controls = "SC-28,CP-9,IA-5,SC-7"
-    k8s_controls      = "SC-7,AU-2,SI-2"
+    s3_controls       = "SC-28_SC-28-1_AU-2_AU-9_CP-9_AC-6"
+    postgres_controls = "SC-28_CP-9_IA-5_SC-7"
+    k8s_controls      = "SC-7_AU-2_SI-2"
   }
 }
 ```
@@ -522,9 +587,9 @@ resource "kubernetes_deployment" "demo_api" {
   metadata {
     name = "atlas-demo-api"
     labels = {
-      app                         = "atlas-demo-api"
-      "compliance:nist-controls"  = "SC-7,SC-28,IA-5,AU-2"
-      "ato:component-type"        = "application"
+      app                = "atlas-demo-api"
+      ComplianceControls = "SC-7_SC-28_IA-5_AU-2"
+      AtoComponentType   = "application"
     }
   }
 
@@ -681,9 +746,45 @@ resource "kubernetes_service" "demo_api" {
     }
 
     type = "LoadBalancer"
+    
+    # NIST 800-53: SC-7 - Additional security controls
+    external_traffic_policy = "Local"  # Preserve source IP
+    session_affinity       = "ClientIP"  # Session persistence
   }
 }
 ```
+
+### Important: LoadBalancer Services in Kind
+
+**Expected Behavior:**
+- LoadBalancer services will remain in **"Pending"** status in Kind clusters
+- This is **normal** - Kind doesn't provide a built-in load balancer implementation
+- The service is still **fully functional** for internal cluster communication
+- Access the service using `kubectl port-forward` for local testing
+
+**Why This Configuration Is Still Valuable:**
+- ✅ **Production-ready**: The exact same code works in cloud environments (AWS, GCP, Azure)
+- ✅ **NIST-compliant**: Includes all security features (external traffic policy, session affinity)
+- ✅ **No code changes**: Deploy to cloud without modifications
+- ✅ **Best practices**: Demonstrates proper service configuration patterns
+
+**Testing in Kind:**
+```bash
+# Service will show <pending> for EXTERNAL-IP - this is expected
+kubectl get svc atlas-demo-api
+
+# Access via port-forward for local testing
+kubectl port-forward service/atlas-demo-api 3000:3000
+
+# Or use internal service discovery from other pods
+# Service is accessible at: atlas-demo-api.default.svc.cluster.local:3000
+```
+
+**In Production Cloud Environments:**
+- Cloud providers automatically provision load balancers
+- External IP is assigned within 1-2 minutes
+- Service becomes publicly accessible
+- All NIST compliance features are active
 
 ## Documentation Requirements
 
@@ -692,16 +793,22 @@ resource "kubernetes_service" "demo_api" {
 - Reference SSP sections where applicable
 - Explain security decisions in comments
 
-### Resource Tags
-Every resource must include:
+### Resource Tags (LocalStack-Compatible Format)
+Every resource must include tags following this format:
 ```hcl
 tags = {
-  "compliance:nist-controls" = "SC-28,AU-2,CP-9"  # Comma-separated control IDs
-  "compliance:impact-level"  = "moderate"         # low, moderate, high
-  "ato:criticality"         = "high"             # low, medium, high
-  "ato:data-classification" = "sensitive"        # public, internal, sensitive, classified
+  ComplianceControls  = "SC-28_AU-2_CP-9"  # Underscore-separated NIST control IDs
+  ComplianceLevel     = "moderate"         # low, moderate, high
+  AtoCriticality      = "high"            # low, medium, high
+  DataClassification  = "sensitive"        # public, internal, sensitive, classified
 }
 ```
+
+**Critical formatting rules:**
+- Use **PascalCase** for tag keys (no colons or hyphens)
+- Use **underscores** to separate multiple control IDs
+- Replace parentheses with hyphens: `SC-28-1` not `SC-28(1)`
+- Use **PascalCase** for multi-word values, no spaces
 
 ### Outputs for Compliance
 Generate outputs that can be used for:
@@ -722,6 +829,55 @@ Generate outputs that can be used for:
 6. **Document security decisions** in code comments
 7. **Use variables** for sensitive values (even with defaults for demo)
 8. **Include outputs** that aid in compliance documentation
+
+### Demo-Specific Guidelines:
+
+**Keep It Simple:**
+- Avoid complex validation rules on variables that have default values
+- Don't add lifecycle policies unless explicitly requested
+- Stick to core security features that work reliably in LocalStack
+- Focus on demonstrating concepts, not production-level complexity
+
+**Common Pitfalls to Avoid:**
+- ❌ **DON'T** add password validation rules when providing a default password
+- ❌ **DON'T** add lifecycle rules without proper `filter` or `prefix` attributes
+- ❌ **DON'T** use advanced AWS features that require LocalStack Pro
+- ❌ **DON'T** over-engineer the demo - simple, working code is better
+- ❌ **DON'T** use colons, commas, or parentheses in tag keys or values
+- ❌ **DON'T** forget `s3_use_path_style = true` in the AWS provider
+- ❌ **DON'T** use complex regex with lookahead assertions in Terraform validation
+- ❌ **DON'T** use empty `to` blocks in NetworkPolicy egress rules (omit entirely for "any destination")
+- ❌ **DON'T** add custom PostgreSQL configs without testing database initialization
+- ❌ **DON'T** assume local socket authentication works the same as network authentication
+- ❌ **DON'T** expect LoadBalancer services to get external IPs in Kind (use port-forward instead)
+- ✅ **DO** focus on NIST control implementation
+- ✅ **DO** include proper tagging and documentation (following LocalStack-compatible format)
+- ✅ **DO** use security best practices (encryption, least privilege, etc.)
+- ✅ **DO** test that resources will work with LocalStack free tier
+- ✅ **DO** use PascalCase for tag keys and underscore separators for list values
+- ✅ **DO** use simple regex patterns like `can(regex("pattern", var.value))` for validation
+- ✅ **DO** test database connectivity from application pods
+- ✅ **DO** verify pg_hba.conf settings match your deployment method
+- ✅ **DO** use LoadBalancer type services even in Kind (production-ready, works via port-forward locally)
+
+### Critical LocalStack-Specific Settings
+
+**Always include these in generated code:**
+
+1. **AWS Provider Configuration:**
+   - `s3_use_path_style = true` - Required for LocalStack S3 compatibility
+   - All endpoint URLs should point to `http://localhost:4566`
+   - Use `skip_credentials_validation = true`
+
+2. **S3 Resources:**
+   - Use path-style URLs, not virtual hosted-style
+   - Lifecycle rules must have `filter {}` or `prefix = "value"`
+   - Keep tags simple (PascalCase keys, underscore-separated values)
+
+3. **Variables:**
+   - Avoid complex validation for demo defaults
+   - Use simple `can(regex())` patterns if validation is needed
+   - Don't validate passwords with lookahead assertions
 
 ### LocalStack Limitations
 
