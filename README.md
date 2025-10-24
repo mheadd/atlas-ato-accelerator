@@ -35,6 +35,26 @@ The proposal outlines three options:
 - ATO documentation generated alongside infrastructure code
 - Reduced friction between development and security teams
 
+## Try the Demo
+
+See it in action! The [`/demo`](demo) directory contains a complete hands-on walkthrough that demonstrates the core ATLAS concept.
+
+**What it does:**
+- Uses AI coding assistants to generate NIST 800-53 compliant Terraform infrastructure
+- Deploys a containerized CRUD API to local Kubernetes (Kind) with simulated AWS services (LocalStack)
+- Automatically generates compliance documentation from infrastructure code
+- Shows how security controls are embedded from the start, not added later
+
+**What you'll learn:**
+- How AGENTS.md guidance files work with AI assistants
+- Patterns for NIST-compliant S3 buckets, PostgreSQL databases, and Kubernetes deployments
+- Automated compliance artifact generation (control matrices, implementation summaries)
+- Production-ready code that works in real cloud environments
+
+**Time required:** ~1 hour for complete walkthrough
+
+👉 **[Get started with the demo →](demo/README.md)**
+
 ## Prototype Plan
 
 A 10-week phased approach:
