@@ -1,11 +1,11 @@
 # ATLAS: ATO Accelerator
 
-ATLAS - **A**utomated **T**erraform **L**everaging **A**I for **S**ecurity
-ATO - **A**uthority **T**o **O**perate
+* ATLAS - **A**utomated **T**erraform **L**everaging **A**I for **S**ecurity
+* ATO - **A**uthority **T**o **O**perate
 
 ## Overview
 
-This project proposes using AI coding assistants to generate NIST-compliant Terraform infrastructure code from the outset, shifting security compliance left in the development process to reduce ATO timelines and improve security posture.
+This project proposes using AI coding assistants to generate NIST-compliant Terraform infrastructure code from the outset, shifting security compliance left in the development process to reduce [ATO timelines](https://atos.open-control.org/steps/#top) and improve security posture.
 
 ## Core Concept
 
