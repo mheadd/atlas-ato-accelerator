@@ -466,12 +466,28 @@ output "compliance_summary" {
 - Estimate effort for remaining controls
 - Design organizational rollout strategy
 - Create business case for full investment
+- **Address guidance file scaling challenges**
+
+**Key Focus Areas:**
+
+*Modular Guidance Architecture:*
+- Refactor monolithic AGENTS.md into focused modules
+- Design `/agents/` directory structure (s3-patterns.md, kubernetes-patterns.md, database-patterns.md, etc.)
+- Define how AI assistants selectively load relevant guidance
+- Establish guidelines for maximum file size per module (target: 300-500 lines each)
+
+*Token Cost Optimization:*
+- Analyze actual token usage from prototype
+- Calculate cost implications at organization scale
+- Evaluate tiered approach (quick reference vs. detailed documentation)
+- Consider dynamic knowledge base alternatives for production
 
 **Deliverables:**
 - Prototype evaluation report
 - Full implementation roadmap (12-18 months)
 - Resource requirements and budget
 - Risk assessment and mitigation strategies
+- **Modular guidance architecture design**
 - Executive presentation deck
 
 **Team:**
@@ -483,6 +499,7 @@ output "compliance_summary" {
 - Clear go/no-go decision with supporting data
 - Executive leadership buy-in for next phase
 - Identified pilot projects for expansion
+- **Scalable guidance architecture validated**
 
 ## Resource Requirements
 
@@ -582,6 +599,19 @@ To be determined based on prototype results, but likely includes:
 - Partner with projects of varying complexity
 - Build in extensibility from the start
 - Maintain escape hatches for edge cases
+
+**Risk:** Guidance files become too large, consuming excessive AI context and increasing token costs.
+
+**Mitigation:**
+- Modular guidance architecture (separate files per resource type)
+- Tiered documentation (quick reference vs. deep dive)
+- AI assistants selectively load only relevant guidance sections
+- Regular pruning to remove redundant or outdated content
+- Consider dynamic knowledge base approach for production scale
+
+**Impact:** Demo AGENTS.md is ~930 lines (~4,000-5,000 tokens) for just 3-4 resource types. Full coverage could reach 10,000+ tokens, significantly impacting cost and context window usage.
+
+**Solution Path:** Phase 5 (Expansion Planning) should include refactoring to modular `/agents/` directory structure with focused files (s3-patterns.md, kubernetes-patterns.md, etc.) that AI assistants read selectively based on task.
 
 ### Organizational Risks
 
