@@ -2,6 +2,7 @@
 
 * ATLAS - **A**utomated **T**erraform **L**everaging **A**I for **S**ecurity
 * ATO - **A**uthority **T**o **O**perate
+* Accelerator - 🚀
 
 ## Overview
 
