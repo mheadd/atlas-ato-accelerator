@@ -1,0 +1,26 @@
+# Terraform
+tf/*.tf
+tf/*.tfvars
+tf/*.tfstate
+tf/*.tfstate.backup
+tf/.terraform/
+tf/.terraform.lock.hcl
+tf/outputs.json
+
+# Generated ATO artifacts
+ato/*.md
+ato/*.csv
+ato/*.pdf
+
+# Keep the README files
+!tf/README.md
+!ato/README.md
+
+# Node modules
+app/node_modules/
+
+# Logs
+*.log
+
+# OS files
+.DS_Store
