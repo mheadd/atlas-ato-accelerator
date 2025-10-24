@@ -2,6 +2,14 @@
 
 This guidance helps AI coding assistants generate NIST 800-53 compliant Terraform infrastructure code for LocalStack environments. While LocalStack simulates AWS services locally, we maintain the same security patterns that would be used in production environments.
 
+## Important: LocalStack Free Tier Limitations
+
+**LocalStack Community Edition** (free) includes basic AWS services like S3, IAM, Lambda, SQS, and SNS.
+
+**LocalStack Pro** (paid) is required for: RDS, ECS, EKS, and other advanced services.
+
+This demo uses **free-tier services** (S3) and runs PostgreSQL as a Kubernetes StatefulSet instead of using RDS.
+
 ## Purpose
 
 Generate Terraform code that:
@@ -9,6 +17,7 @@ Generate Terraform code that:
 - Uses secure baselines for all resources
 - Includes compliance annotations and mappings
 - Produces documentation suitable for ATO artifacts
+- Works with LocalStack Community Edition (free)
 
 ## Terraform Provider Configuration
 
@@ -45,8 +54,8 @@ provider "aws" {
   skip_requesting_account_id  = true
 
   endpoints {
-    rds            = "http://localhost:4566"
     s3             = "http://localhost:4566"
+    iam            = "http://localhost:4566"
     secretsmanager = "http://localhost:4566"
     kms            = "http://localhost:4566"
   }
@@ -67,7 +76,235 @@ provider "kubernetes" {
 }
 ```
 
-## RDS Database Patterns
+## S3 Bucket Patterns
+
+### Controls Addressed
+- **SC-13**: Cryptographic Protection
+- **SC-28**: Protection of Information at Rest  
+- **SC-28(1)**: Cryptographic Protection (encryption at rest)
+- **AU-2**: Audit Events
+- **AU-9**: Protection of Audit Information
+- **CP-9**: Information System Backup
+- **CP-9(1)**: Testing for Reliability/Integrity
+- **AC-6**: Least Privilege Access
+
+### Compliant S3 Bucket
+
+```hcl
+# File: s3.tf
+# NIST 800-53: SC-28, SC-28(1) - Protection of Information at Rest
+# Compliance Level: Moderate Impact
+# SSP Section Reference: 10.3.1 Data Encryption
+
+resource "aws_s3_bucket" "app_storage" {
+  bucket = var.bucket_name
+  
+  tags = {
+    Name                       = var.bucket_name
+    "compliance:nist-controls" = "SC-28,SC-28(1),AU-2,AU-9,CP-9,AC-6"
+    "compliance:impact-level"  = "moderate"
+    "ato:criticality"          = "high"
+    "ato:data-classification"  = "sensitive"
+  }
+}
+
+# NIST 800-53: SC-28(1) - Cryptographic Protection
+resource "aws_s3_bucket_server_side_encryption_configuration" "app_storage" {
+  bucket = aws_s3_bucket.app_storage.id
+
+  rule {
+    apply_server_side_encryption_by_default {
+      sse_algorithm     = "AES256"  # LocalStack free tier supports AES256
+    }
+  }
+}
+
+# NIST 800-53: CP-9 - Information System Backup
+resource "aws_s3_bucket_versioning" "app_storage" {
+  bucket = aws_s3_bucket.app_storage.id
+  
+  versioning_configuration {
+    status = "Enabled"
+  }
+}
+
+# NIST 800-53: AU-2, AU-9 - Audit Events and Protection
+resource "aws_s3_bucket_logging" "app_storage" {
+  bucket = aws_s3_bucket.app_storage.id
+
+  target_bucket = aws_s3_bucket.logs.id
+  target_prefix = "s3-access-logs/"
+}
+
+# Separate bucket for logs
+resource "aws_s3_bucket" "logs" {
+  bucket = "${var.bucket_name}-logs"
+  
+  tags = {
+    Name                       = "${var.bucket_name}-logs"
+    "compliance:nist-controls" = "AU-2,AU-9"
+    Purpose                    = "Access Logs"
+  }
+}
+
+# NIST 800-53: AC-6 - Least Privilege
+resource "aws_s3_bucket_public_access_block" "app_storage" {
+  bucket = aws_s3_bucket.app_storage.id
+
+  block_public_acls       = true
+  block_public_policy     = true
+  ignore_public_acls      = true
+  restrict_public_buckets = true
+}
+```
+
+## PostgreSQL Database Patterns (Kubernetes)
+
+Since RDS requires LocalStack Pro, we deploy PostgreSQL as a Kubernetes StatefulSet with NIST-compliant configurations.
+
+### Controls Addressed
+- **SC-28**: Protection of Information at Rest  
+- **AU-2**: Audit Events
+- **CP-9**: Information System Backup (via persistent volumes)
+- **IA-5**: Authenticator Management
+- **SC-7**: Boundary Protection
+
+### Compliant PostgreSQL StatefulSet
+
+```hcl
+# File: k8s-postgres.tf
+# NIST 800-53: SC-28, CP-9 - Database with Persistent Storage
+
+resource "kubernetes_stateful_set" "postgres" {
+  metadata {
+    name = "postgres"
+    labels = {
+      app                         = "postgres"
+      "compliance:nist-controls"  = "SC-28,CP-9,IA-5,SC-7"
+    }
+  }
+
+  spec {
+    service_name = "postgres"
+    replicas     = 1
+
+    selector {
+      match_labels = {
+        app = "postgres"
+      }
+    }
+
+    template {
+      metadata {
+        labels = {
+          app = "postgres"
+        }
+      }
+
+      spec {
+        # NIST 800-53: SC-7 - Security Context
+        security_context {
+          run_as_non_root = true
+          run_as_user     = 999  # postgres user
+          fs_group        = 999
+        }
+
+        container {
+          name  = "postgres"
+          image = "postgres:15-alpine"
+
+          # NIST 800-53: IA-5 - Authenticator Management
+          env {
+            name  = "POSTGRES_DB"
+            value = var.db_name
+          }
+          
+          env {
+            name  = "POSTGRES_USER"
+            value = var.db_username
+          }
+          
+          env {
+            name  = "POSTGRES_PASSWORD"
+            value = var.db_password
+            # Note: In production, use Kubernetes secrets
+          }
+
+          port {
+            container_port = 5432
+            name          = "postgresql"
+          }
+
+          # NIST 800-53: CP-9 - Persistent Storage
+          volume_mount {
+            name       = "postgres-data"
+            mount_path = "/var/lib/postgresql/data"
+          }
+
+          resources {
+            limits = {
+              cpu    = "500m"
+              memory = "512Mi"
+            }
+            requests = {
+              cpu    = "250m"
+              memory = "256Mi"
+            }
+          }
+
+          # NIST 800-53: SC-7 - Container Security
+          security_context {
+            allow_privilege_escalation = false
+            read_only_root_filesystem  = false
+          }
+        }
+      }
+    }
+
+    # NIST 800-53: CP-9 - Persistent Volume Claim
+    volume_claim_template {
+      metadata {
+        name = "postgres-data"
+      }
+      
+      spec {
+        access_modes = ["ReadWriteOnce"]
+        
+        resources {
+          requests = {
+            storage = "1Gi"
+          }
+        }
+      }
+    }
+  }
+}
+
+# Service for database access
+resource "kubernetes_service" "postgres" {
+  metadata {
+    name = "postgres"
+  }
+
+  spec {
+    selector = {
+      app = "postgres"
+    }
+
+    port {
+      port        = 5432
+      target_port = 5432
+      protocol    = "TCP"
+    }
+
+    cluster_ip = "None"  # Headless service for StatefulSet
+  }
+}
+```
+
+## RDS Database Patterns (Reference Only - Requires LocalStack Pro)
+
+**Note:** The patterns below are for reference and production use. LocalStack Community Edition does not support RDS. For the demo, use the PostgreSQL StatefulSet pattern above.
 
 ### Controls Addressed
 - **SC-13**: Cryptographic Protection
@@ -197,10 +434,10 @@ variable "aws_region" {
   default     = "us-east-1"
 }
 
-variable "db_identifier" {
-  description = "Unique identifier for the RDS instance"
+variable "bucket_name" {
+  description = "Name of the S3 bucket for application storage"
   type        = string
-  default     = "atlas-demo-db"
+  default     = "atlas-demo-storage"
 }
 
 variable "db_name" {
@@ -222,18 +459,6 @@ variable "db_password" {
   default     = "ChangeMeInProduction123!"
   sensitive   = true
 }
-
-variable "db_instance_class" {
-  description = "RDS instance type"
-  type        = string
-  default     = "db.t3.micro"
-}
-
-variable "db_allocated_storage" {
-  description = "Allocated storage in GB"
-  type        = number
-  default     = 20
-}
 ```
 
 ### Outputs Pattern
@@ -243,37 +468,37 @@ variable "db_allocated_storage" {
 # NIST 800-53: CM-8 - Information System Component Inventory
 # Outputs for integration and documentation
 
-output "db_endpoint" {
-  description = "RDS instance endpoint"
-  value       = aws_db_instance.app_database.endpoint
+output "s3_bucket_name" {
+  description = "S3 bucket name for application storage"
+  value       = aws_s3_bucket.app_storage.id
+}
+
+output "s3_bucket_arn" {
+  description = "S3 bucket ARN for compliance tracking"
+  value       = aws_s3_bucket.app_storage.arn
+}
+
+output "db_host" {
+  description = "PostgreSQL database host"
+  value       = "postgres.default.svc.cluster.local"
 }
 
 output "db_port" {
-  description = "RDS instance port"
-  value       = aws_db_instance.app_database.port
+  description = "PostgreSQL database port"
+  value       = "5432"
 }
 
 output "db_name" {
   description = "Database name"
-  value       = aws_db_instance.app_database.db_name
-}
-
-output "db_arn" {
-  description = "RDS instance ARN for compliance tracking"
-  value       = aws_db_instance.app_database.arn
-}
-
-output "kms_key_id" {
-  description = "KMS key ID used for encryption"
-  value       = aws_kms_key.database.key_id
+  value       = var.db_name
 }
 
 output "compliance_controls" {
   description = "NIST 800-53 controls implemented by this infrastructure"
   value = {
-    rds_controls = "SC-28,SC-28(1),AU-2,AU-9,CP-9,IA-5,SI-7"
-    kms_controls = "SC-12,SC-13,SC-28(1)"
-    sg_controls  = "SC-7,SC-7(5)"
+    s3_controls       = "SC-28,SC-28(1),AU-2,AU-9,CP-9,AC-6"
+    postgres_controls = "SC-28,CP-9,IA-5,SC-7"
+    k8s_controls      = "SC-7,AU-2,SI-2"
   }
 }
 ```
@@ -336,17 +561,17 @@ resource "kubernetes_deployment" "demo_api" {
           # Database credentials passed as environment variables
           env {
             name  = "DB_HOST"
-            value = split(":", aws_db_instance.app_database.endpoint)[0]
+            value = "postgres.default.svc.cluster.local"
           }
           
           env {
             name  = "DB_PORT"
-            value = tostring(aws_db_instance.app_database.port)
+            value = "5432"
           }
           
           env {
             name  = "DB_NAME"
-            value = aws_db_instance.app_database.db_name
+            value = var.db_name
           }
           
           env {
@@ -358,6 +583,26 @@ resource "kubernetes_deployment" "demo_api" {
             name  = "DB_PASSWORD"
             value = var.db_password
             # Note: In production, use Kubernetes secrets or external secret manager
+          }
+          
+          env {
+            name  = "S3_BUCKET"
+            value = aws_s3_bucket.app_storage.id
+          }
+          
+          env {
+            name  = "S3_ENDPOINT"
+            value = "http://host.docker.internal:4566"  # LocalStack endpoint from Kind
+          }
+          
+          env {
+            name  = "AWS_ACCESS_KEY_ID"
+            value = "test"
+          }
+          
+          env {
+            name  = "AWS_SECRET_ACCESS_KEY"
+            value = "test"
           }
           
           env {

@@ -27,8 +27,9 @@ WORKDIR /app
 
 # NIST 800-53: AC-6 - Least Privilege
 # Create non-root user with specific UID/GID
-RUN addgroup -g 1000 appuser && \
-    adduser -D -u 1000 -G appuser appuser
+# Use higher UID/GID to avoid conflicts with system users
+RUN addgroup -g 10000 appuser && \
+    adduser -D -u 10000 -G appuser appuser
 
 # Copy dependencies from previous stage
 COPY --from=dependencies --chown=appuser:appuser /app/node_modules ./node_modules

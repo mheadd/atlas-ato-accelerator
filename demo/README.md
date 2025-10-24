@@ -6,12 +6,48 @@ This demo showcases how AI coding assistants can generate NIST-compliant Terrafo
 
 Before starting, ensure you have the following tools installed:
 
+### Quick Setup (Recommended)
+
+Run the automated setup script to check and install prerequisites:
+
+```bash
+cd demo
+./setup.sh
+```
+
+This script will:
+- Check if all required tools are installed
+- Offer to install missing tools via Homebrew (macOS)
+- Let you choose between Colima (free) or Docker Desktop
+- Verify versions of installed tools
+
+### Manual Installation
+
+If you prefer to install tools manually, here are the requirements:
+
 ### Required Tools
 
-- **Docker Desktop** - For running containers
+- **Container Runtime** - Choose one:
+  
+  **Option A: Docker Desktop** (Commercial license required for large organizations)
   ```bash
   docker --version  # Should be 20.10+
   ```
+  Install: https://www.docker.com/products/docker-desktop/
+
+  **Option B: Colima** (Free, open-source alternative for macOS/Linux)
+  ```bash
+  colima --version  # Should be 0.5+
+  docker --version  # Colima provides Docker CLI
+  ```
+  Install on macOS: `brew install colima`
+  
+  Start Colima:
+  ```bash
+  colima start --cpu 4 --memory 8
+  ```
+  
+  See: https://github.com/abiosoft/colima
 
 - **Kind** (Kubernetes in Docker) - Local Kubernetes cluster
   ```bash
@@ -37,6 +73,8 @@ Before starting, ensure you have the following tools installed:
   localstack --version  # Should be 3.0+
   ```
   Install: `pip install localstack` or see https://docs.localstack.cloud/getting-started/installation/
+  
+  **Note:** The free Community edition includes S3, IAM, and other basic services. RDS requires a Pro license, so this demo uses PostgreSQL running in Kubernetes with S3 for file storage.
 
 - **Helm** - Kubernetes package manager
   ```bash
@@ -58,6 +96,30 @@ Before starting, ensure you have the following tools installed:
   ```
 
 ## Demo Setup
+
+### Step 0: Verify Container Runtime
+
+Before proceeding, ensure your container runtime is running:
+
+**If using Docker Desktop:**
+```bash
+# Check if Docker is running
+docker ps
+
+# If not running, start Docker Desktop from Applications
+```
+
+**If using Colima:**
+```bash
+# Check if Colima is running
+colima status
+
+# If not running, start Colima
+colima start --cpu 4 --memory 8
+
+# Verify Docker is working
+docker ps
+```
 
 ### Step 1: Start LocalStack
 
@@ -84,8 +146,8 @@ export AWS_SECRET_ACCESS_KEY=test
 export AWS_DEFAULT_REGION=us-east-1
 export AWS_ENDPOINT_URL=http://localhost:4566
 
-# Test connection
-aws --endpoint-url=http://localhost:4566 rds describe-db-instances
+# Test connection (S3 is available in free tier)
+aws --endpoint-url=http://localhost:4566 s3 ls
 ```
 
 ### Step 2: Create Kind Cluster
@@ -125,19 +187,19 @@ cd ..
 
 Now you're ready to use AI assistance to generate NIST-compliant infrastructure code!
 
-### Phase 1: Generate RDS Infrastructure (Terraform)
+### Phase 1: Generate AWS Infrastructure (Terraform)
 
 Open your AI coding assistant (Claude, GitHub Copilot, etc.) in your IDE. The assistant will automatically read the `AGENTS.md` file in this directory.
 
-**Prompt 1: Generate RDS Database Infrastructure**
+**Prompt 1: Generate S3 Bucket for Application Data**
 
 ```
-Create Terraform configuration for a PostgreSQL RDS database instance in LocalStack 
-that will be used by our demo CRUD API. The database should be NIST-compliant 
-following the patterns in AGENTS.md. Store the configuration in demo/tf/rds.tf
+Create Terraform configuration for an S3 bucket in LocalStack that will be used 
+for storing application file uploads. The bucket should be NIST-compliant 
+following the patterns in AGENTS.md. Store the configuration in demo/tf/s3.tf
 ```
 
-Expected output: Terraform file with encrypted RDS instance, proper tagging, backup configuration, and NIST control mappings.
+Expected output: Terraform file with encrypted S3 bucket, versioning, logging, proper tagging, and NIST control mappings.
 
 **Prompt 2: Generate Terraform Provider Configuration**
 
@@ -149,15 +211,15 @@ configured to work with LocalStack running at http://localhost:4566
 **Prompt 3: Generate Terraform Variables**
 
 ```
-Create a variables file in demo/tf/variables.tf for the RDS configuration,
-including database name, username, instance class, and allocated storage
+Create a variables file in demo/tf/variables.tf for the infrastructure configuration,
+including bucket name, AWS region, and environment settings
 ```
 
 **Prompt 4: Generate Terraform Outputs**
 
 ```
-Create outputs in demo/tf/outputs.tf that will expose the RDS endpoint,
-port, and database name for use by our application
+Create outputs in demo/tf/outputs.tf that will expose the S3 bucket name and ARN
+for use by our application
 ```
 
 ### Phase 2: Apply Infrastructure
@@ -182,16 +244,24 @@ terraform output -json > outputs.json
 
 ### Phase 3: Generate Kubernetes Deployment
 
-**Prompt 5: Generate Kubernetes Deployment**
+**Prompt 5: Generate PostgreSQL Database Deployment**
+
+```
+Create a Kubernetes StatefulSet manifest in demo/tf/k8s-postgres.tf using the 
+Terraform Kubernetes provider. Deploy a PostgreSQL database with persistent 
+storage for our demo API. Include NIST-compliant security configurations.
+```
+
+**Prompt 6: Generate Application Deployment**
 
 ```
 Create a Kubernetes deployment manifest in demo/tf/k8s-deployment.tf using the 
 Terraform Kubernetes provider. Deploy the atlas-demo-api:latest container with 
-environment variables for database connectivity using the RDS outputs. Include 
+environment variables for database connectivity and S3 bucket access. Include 
 resource limits and health checks.
 ```
 
-**Prompt 6: Generate Kubernetes Service**
+**Prompt 7: Generate Kubernetes Service**
 
 ```
 Create a Kubernetes service manifest in demo/tf/k8s-service.tf to expose the 
@@ -245,7 +315,7 @@ curl -X DELETE http://localhost:3000/api/items/{id}
 
 ### Phase 5: Generate Compliance Documentation
 
-**Prompt 7: Generate Compliance Report**
+**Prompt 8: Generate Compliance Report**
 
 ```
 Analyze the Terraform files in demo/tf/ and generate a compliance summary document
@@ -254,7 +324,7 @@ implemented, which resources implement each control, and the specific configurat
 that satisfy each control requirement.
 ```
 
-**Prompt 8: Generate Control Implementation Matrix**
+**Prompt 9: Generate Control Implementation Matrix**
 
 ```
 Create a control implementation matrix in demo/ato/control-matrix.csv that maps
