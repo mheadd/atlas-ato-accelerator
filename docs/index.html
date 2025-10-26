@@ -1,0 +1,333 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="description" content="ATLAS ATO Accelerator - AI-assisted generation of NIST-compliant infrastructure code to accelerate Authority to Operate timelines">
+    <title>ATLAS: ATO Accelerator</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', 'Oxygen', 'Ubuntu', 'Cantarell', sans-serif;
+            line-height: 1.6;
+            color: #333;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+        }
+
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 2rem;
+        }
+
+        header {
+            text-align: center;
+            color: white;
+            padding: 3rem 0;
+        }
+
+        h1 {
+            font-size: 4.5rem;
+            font-weight: 700;
+            margin-bottom: 0.5rem;
+            text-shadow: 2px 2px 4px rgba(0,0,0,0.2);
+        }
+
+        .subtitle {
+            font-size: 1.8rem;
+            opacity: 0.95;
+            margin-bottom: 1rem;
+        }
+
+        .acronym {
+            font-size: 0.9rem;
+            opacity: 0.85;
+            font-style: italic;
+        }
+
+        main {
+            background: white;
+            border-radius: 12px;
+            box-shadow: 0 10px 40px rgba(0,0,0,0.1);
+            padding: 3rem;
+            margin-top: 2rem;
+        }
+
+        section {
+            margin-bottom: 3rem;
+        }
+
+        h2 {
+            color: #667eea;
+            font-size: 2rem;
+            margin-bottom: 1rem;
+            border-bottom: 3px solid #667eea;
+            padding-bottom: 0.5rem;
+        }
+
+        h3 {
+            color: #764ba2;
+            font-size: 1.5rem;
+            margin-top: 2rem;
+            margin-bottom: 1rem;
+        }
+
+        p {
+            margin-bottom: 1rem;
+            font-size: 1.1rem;
+            line-height: 1.8;
+        }
+
+        .problem-box {
+            background: #fff5f5;
+            border-left: 4px solid #fc8181;
+            padding: 1.5rem;
+            margin: 1.5rem 0;
+            border-radius: 4px;
+        }
+
+        .solution-box {
+            background: #f0fff4;
+            border-left: 4px solid #68d391;
+            padding: 1.5rem;
+            margin: 1.5rem 0;
+            border-radius: 4px;
+        }
+
+        .benefits-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+            gap: 1.5rem;
+            margin: 2rem 0;
+        }
+
+        .benefit-card {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            padding: 1.5rem;
+            border-radius: 8px;
+            box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+        }
+
+        .benefit-card h3 {
+            color: white;
+            margin-top: 0;
+            font-size: 1.2rem;
+        }
+
+        .benefit-card p {
+            font-size: 1rem;
+            margin-bottom: 0;
+        }
+
+        .cta-section {
+            text-align: center;
+            padding: 2rem;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            border-radius: 8px;
+            color: white;
+            margin-top: 3rem;
+        }
+
+        .cta-section h2 {
+            color: white;
+            border-bottom: none;
+            margin-bottom: 1.5rem;
+        }
+
+        .button-group {
+            display: flex;
+            gap: 1rem;
+            justify-content: center;
+            flex-wrap: wrap;
+            margin-top: 2rem;
+        }
+
+        .button {
+            display: inline-block;
+            padding: 1rem 2rem;
+            background: white;
+            color: #667eea;
+            text-decoration: none;
+            border-radius: 6px;
+            font-weight: 600;
+            font-size: 1.1rem;
+            transition: all 0.3s ease;
+            box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+        }
+
+        .button:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 6px 12px rgba(0,0,0,0.15);
+            background: #f7fafc;
+        }
+
+        .button-secondary {
+            background: transparent;
+            color: white;
+            border: 2px solid white;
+        }
+
+        .button-secondary:hover {
+            background: rgba(255,255,255,0.1);
+        }
+
+        ul {
+            margin-left: 2rem;
+            margin-bottom: 1rem;
+        }
+
+        li {
+            margin-bottom: 0.5rem;
+            font-size: 1.1rem;
+        }
+
+        footer {
+            text-align: center;
+            color: white;
+            padding: 2rem 0;
+            font-size: 0.9rem;
+            opacity: 0.9;
+        }
+
+        footer a {
+            color: white;
+            text-decoration: underline;
+        }
+
+        @media (max-width: 768px) {
+            h1 {
+                font-size: 2.5rem;
+            }
+
+            main {
+                padding: 2rem;
+            }
+
+            .benefits-grid {
+                grid-template-columns: 1fr;
+            }
+
+            .button-group {
+                flex-direction: column;
+                align-items: stretch;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <header>
+            <h1>ATLAS</h1>
+            <div class="subtitle">ATO Accelerator</div>
+        </header>
+
+        <main>
+            <section id="overview">
+                <h2>The Challenge</h2>
+                <div class="problem-box">
+                    <p><strong>Federal agencies face a persistent bottleneck:</strong> Infrastructure code is typically developed for functionality first, then retrofitted for security compliance during the Authority to Operate (ATO) process.</p>
+                    <p>This reactive approach can create delays, rework, and inconsistencies across projects—often adding months to deployment timelines.</p>
+                </div>
+            </section>
+
+            <section id="solution">
+                <h2>A Potential Solution</h2>
+                <div class="solution-box">
+                    <p><strong>What if infrastructure code was NIST-compliant from the start?</strong></p>
+                    <p>ATLAS uses AI coding assistants to generate Terraform infrastructure code with security controls and compliance documentation baked-in from day one—shifting compliance left in the development process.</p>
+                </div>
+
+                <h3>How It Works</h3>
+                <p>ATLAS creates <a href="https://github.com/mheadd/atlas-ato-accelerator/blob/main/demo/AGENTS.md">specialized guidance documents</a> that AI assistants (Claude, GitHub Copilot, etc.) read before generating infrastructure code. These documents encode:</p>
+                <ul>
+                    <li>NIST 800-53 control implementation patterns</li>
+                    <li>Secure baseline configurations for common resources</li>
+                    <li>Documentation requirements for ATO artifacts</li>
+                    <li>Organizational standards and approved architectures</li>
+                </ul>
+                <p>When developers request infrastructure code, the AI generates Terraform that's both functional and ATO-ready—complete with control mappings, security configurations, and compliance annotations.</p>
+                <p>ATLAS is designed to complement, not replace, existing compliance tooling. Policy-as-code validation tools like <a href="https://www.openpolicyagent.org/">Open Policy Agent (OPA)</a> and <a href="https://www.hashicorp.com/en/sentinel">HashiCorp Sentinel</a> remain essential components of a comprehensive compliance strategy. ATLAS shifts security left by generating compliant code from the start, while validation tools provide the safety net to catch configuration drift and enforce organizational policies. Together, they create a defense-in-depth approach to infrastructure compliance.</p>
+                <p>Best of all, this approach enables the rapid development of <a href="https://github.com/mheadd/atlas-ato-accelerator/tree/main/examples">artifacts outlining control implementation</a> that can be used to accelerate the ATO process.</p>
+            </section>
+
+            <section id="benefits">
+                <h2>Expected Benefits</h2>
+                <div class="benefits-grid">
+                    <div class="benefit-card">
+                        <h3>🚀 Faster ATOs</h3>
+                        <p>Reduction in ATO preparation time by generating compliant code from the start</p>
+                    </div>
+                    <div class="benefit-card">
+                        <h3>🛡️ Better Security</h3>
+                        <p>Consistent security patterns across all projects with controls embedded by default</p>
+                    </div>
+                    <div class="benefit-card">
+                        <h3>📝 Auto Documentation</h3>
+                        <p>Compliance artifacts generated automatically from infrastructure code, not maintained separately</p>
+                    </div>
+                    <div class="benefit-card">
+                        <h3>👥 Team Collaboration</h3>
+                        <p>Reduced friction between development and security teams through shared patterns</p>
+                    </div>
+                    <div class="benefit-card">
+                        <h3>📚 Knowledge Sharing</h3>
+                        <p>NIST compliance expertise encoded in easy to use files and accessible to all developers</p>
+                    </div>
+                    <div class="benefit-card">
+                        <h3>🔄 Living Compliance</h3>
+                        <p>Documentation stays current as infrastructure evolves through code develeopment</p>
+                    </div>
+                </div>
+            </section>
+
+            <section id="demo">
+                <h2>See It In Action</h2>
+                <p>Try the <a href="https://github.com/mheadd/atlas-ato-accelerator/blob/main/demo/README.md">interactive demo</a> that walks you through generating NIST-compliant cloud infrastructure for a containerized application using <a href="https://kind.sigs.k8s.io/">local Kubernetes</a> and <a href="https://github.com/localstack/localstack">simulated AWS services</a>.</p>
+                <p><strong>What you'll do:</strong></p>
+                <ul>
+                    <li>Use an AI assistant of your choice to generate secure S3 buckets, PostgreSQL databases, and Kubernetes deployments</li>
+                    <li>See NIST 800-53 controls embedded in infrastructure code</li>
+                    <li>Automatically generate compliance documentation from the code</li>
+                    <li>Deploy everything locally on your laptop in ~1 hour</li>
+                </ul>
+            </section>
+
+            <section class="cta-section">
+                <h2>Get Started</h2>
+                <p>Explore the proposal, try the demo, or dive into the code</p>
+                <div class="button-group">
+                    <a href="https://github.com/mheadd/atlas-ato-accelerator/blob/main/demo/README.md" class="button">Try the Demo</a>
+                    <a href="https://github.com/mheadd/atlas-ato-accelerator/blob/main/PROPOSAL.md" class="button">Read the Proposal</a>
+                    <a href="https://github.com/mheadd/atlas-ato-accelerator" class="button button-secondary">View on GitHub</a>
+                </div>
+            </section>
+
+            <section id="approach">
+                <h2>Implementation Approaches</h2>
+                <p>ATLAS offers flexible implementation options to fit different organizational needs:</p>
+                
+                <h3>Option 1: AGENTS.md Files</h3>
+                <p>Repository-specific markdown files that AI assistants automatically read. Perfect for project-specific requirements and easy to version control alongside infrastructure code.</p>
+                
+                <h3>Option 2: Claude Skill Architecture</h3>
+                <p>Formal skills with comprehensive NIST-Terraform guidance that work across all interactions. Ideal for organizations seeking centralized, authoritative patterns.</p>
+                
+                <h3>Option 3: Hybrid Multi-Layered System</h3>
+                <p>Combines organization-level base skills with project-level customizations, balancing standardization with flexibility for diverse projects.</p>
+            </section>
+        </main>
+
+        <footer>
+            <p>Copyright © 2025 Mark Headd | Licensed under <a href="https://github.com/mheadd/atlas-ato-accelerator/blob/main/LICENSE">Apache License 2.0</a></p>
+            <p>ATLAS: <strong>A</strong>utomated <strong>T</strong>erraform <strong>L</strong>everaging <strong>A</strong>I for <strong>S</strong>ecurity</p>
+        </footer>
+    </div>
+</body>
+</html>
