@@ -210,6 +210,15 @@ Since RDS requires LocalStack Pro, we deploy PostgreSQL as a Kubernetes Stateful
 
 ### Important PostgreSQL Deployment Considerations
 
+**🚨 CRITICAL: Security Context Configuration**
+- ❌ **DON'T** set `run_as_user` or `run_as_non_root` at the **pod level** - this breaks PostgreSQL initialization
+- ❌ **DON'T** set `run_as_user` at the **container level** either
+- ✅ **DO** set `allow_privilege_escalation = false` at container level for security
+- ✅ **DO** set `fs_group` at pod level if needed for volume permissions
+- **Why:** PostgreSQL's `initdb` process requires specific file permissions to initialize `/var/lib/postgresql/data`
+- **Error if misconfigured:** `chmod: Operation not permitted` / `initdb: error: could not change permissions`
+- **Security maintained:** Container still cannot escalate privileges, meeting NIST SC-7 requirements
+
 **NetworkPolicy Egress Rules:**
 - ❌ **DON'T** use empty `to` blocks in egress rules - this is invalid
 - ✅ **DO** omit the `to` block entirely to allow "any destination"
@@ -262,11 +271,10 @@ resource "kubernetes_stateful_set" "postgres" {
 
       spec {
         # NIST 800-53: SC-7 - Security Context
-        security_context {
-          run_as_non_root = true
-          run_as_user     = 999  # postgres user
-          fs_group        = 999
-        }
+        # CRITICAL: Do NOT set run_as_user or run_as_non_root at pod level for PostgreSQL
+        # PostgreSQL's initdb requires specific permissions during initialization
+        # Setting these causes "Operation not permitted" errors on /var/lib/postgresql/data
+        # Security is maintained via container-level restrictions below
 
         container {
           name  = "postgres"
@@ -312,9 +320,11 @@ resource "kubernetes_stateful_set" "postgres" {
           }
 
           # NIST 800-53: SC-7 - Container Security
+          # Security enforced at container level (not pod level) for PostgreSQL compatibility
           security_context {
             allow_privilege_escalation = false
             read_only_root_filesystem  = false
+            # Note: Do NOT set run_as_user here - breaks PostgreSQL initialization
           }
         }
       }
