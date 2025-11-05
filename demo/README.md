@@ -404,6 +404,10 @@ kind delete cluster --name atlas-demo
 
 # Stop LocalStack
 localstack stop
+
+# Remove any tf files or ATO compliance summaries (files ignored via .gitignore)
+# From the proect root directory
+git clean -f -X -d
 ```
 
 ## What This Demonstrates
